@@ -1,0 +1,12 @@
+cat > .gitignore << 'EOF'
+# Private keys - never commit these
+identity.pem
+*.pem
+*.key
+seed.hex
+.env
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+EOF

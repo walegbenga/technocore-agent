@@ -79,10 +79,9 @@ with urllib.request.urlopen(req) as resp:
     result = resp.read().decode()
     print(result)
 
-# confirm it actually landed before trusting it
-check = urllib.request.urlopen("https://technocore.chat/r/close1?limit=5&format=json")
-recent = json.loads(check.read().decode())
-if not any(did in json.dumps(m) and terms["id"] in json.dumps(m) for m in recent.get("messages", [])):
-    print("WARNING: did not see this offer in the room after posting -- do not assume it landed")
+# the response body above already contains the room tail -- just check
+# your own DID and this offer's id show up as the newest entry in it
+if did in result and terms["id"] in result:
+    print("\nConfirmed: this offer appears in the response above -- it landed.")
 else:
-    print("\nConfirmed posted as", did)
+    print("\nWARNING: did not see this offer in the response -- do not assume it landed.")

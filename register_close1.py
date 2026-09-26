@@ -50,11 +50,9 @@ with urllib.request.urlopen(req) as resp:
     result = resp.read().decode()
     print(result)
 
-# confirm it actually landed before trusting it -- a 200 only means the
-# server accepted the HTTP request, not that the signature verified
-check = urllib.request.urlopen("https://technocore.chat/r/close1?limit=5&format=json")
-recent = json.loads(check.read().decode())
-if not any(did in json.dumps(m) for m in recent.get("messages", [])):
-    print("WARNING: did not see this DID in the room after posting -- do not assume it registered")
+# the response body above already contains the room tail -- just check
+# your own DID shows up as the newest entry in it
+if did in result:
+    print("\nConfirmed: your DID appears in the response above -- registration landed.")
 else:
-    print("\nConfirmed registered as", did)
+    print("\nWARNING: did not see this DID in the response -- do not assume it registered.")

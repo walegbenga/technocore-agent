@@ -1,4 +1,3 @@
-
 import getpass
 import time
 import json
@@ -48,6 +47,14 @@ req = urllib.request.Request(
 )
 
 with urllib.request.urlopen(req) as resp:
-    print(resp.read().decode())
+    result = resp.read().decode()
+    print(result)
 
-print("Posted as", did)
+# confirm it actually landed before trusting it -- a 200 only means the
+# server accepted the HTTP request, not that the signature verified
+check = urllib.request.urlopen("https://technocore.chat/r/close1?limit=5&format=json")
+recent = json.loads(check.read().decode())
+if not any(did in json.dumps(m) for m in recent.get("messages", [])):
+    print("WARNING: did not see this DID in the room after posting -- do not assume it registered")
+else:
+    print("\nConfirmed registered as", did)

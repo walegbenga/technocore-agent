@@ -19,6 +19,13 @@ while n > 0:
     res = alphabet[r] + res
 did = "did:key:z" + res
 
+# Pull the current sweep number so "until" is actually valid, not a guess
+price_resp = urllib.request.urlopen("https://technocore.chat/r/d-close1-price?limit=1&format=json")
+price_data = json.loads(price_resp.read().decode())
+latest_price_msg = price_data.get("messages", [{}])[-1]
+current_sweep = json.loads(latest_price_msg.get("text", "{}")).get("n", 0)
+until_sweep = current_sweep + 12  # good for ~12 sweeps out
+
 # Small test offer
 terms = {
     "id": "test-" + str(int(time.time())),
@@ -27,7 +34,7 @@ terms = {
     "qty": "0.10",
     "side": "sell",
     "taker": "any",
-    "until": 400
+    "until": until_sweep
 }
 terms_str = json.dumps(terms, separators=(",", ":"), sort_keys=True)
 
@@ -35,16 +42,17 @@ terms_str = json.dumps(terms, separators=(",", ":"), sort_keys=True)
 payload_to_sign = f"close-1|terms|{terms_str}".encode()
 maker_sig = base64.urlsafe_b64encode(private_key.sign(payload_to_sign)).decode().rstrip("=")
 
+# This is a STANDING OFFER, not a completed trade -- "t":"trade" is reserved
+# for a deal both sides have already signed. "t":"offer" carries just the
+# maker's signed terms so a taker can find them and complete the deal later.
 text = json.dumps({
-    "t": "trade",
+    "t": "offer",
     "season": "close-1",
     "terms": terms,
-    "taker": "any",
-    "maker_sig": maker_sig,
-    "taker_sig": ""
+    "maker_sig": maker_sig
 }, separators=(",", ":"))
 
-print("Posting test offer:")
+print("Posting offer:")
 print(text)
 print()
 
@@ -68,6 +76,13 @@ req = urllib.request.Request(
 )
 
 with urllib.request.urlopen(req) as resp:
-    print(resp.read().decode())
+    result = resp.read().decode()
+    print(result)
 
-print("\nPosted as", did)
+# confirm it actually landed before trusting it
+check = urllib.request.urlopen("https://technocore.chat/r/close1?limit=5&format=json")
+recent = json.loads(check.read().decode())
+if not any(did in json.dumps(m) and terms["id"] in json.dumps(m) for m in recent.get("messages", [])):
+    print("WARNING: did not see this offer in the room after posting -- do not assume it landed")
+else:
+    print("\nConfirmed posted as", did)

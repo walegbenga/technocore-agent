@@ -13,3 +13,6 @@ __pycache__/
 closecall_agent/keys/
 *.seed
 *.nonce
+
+identity.passphrase.txt
+last_offer.json

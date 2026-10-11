@@ -15,4 +15,4 @@ closecall_agent/keys/
 *.nonce
 
 identity.passphrase.txt
-last_offer.json
+last_offer.jsonresponse.txt

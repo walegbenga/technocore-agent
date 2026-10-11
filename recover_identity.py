@@ -52,8 +52,8 @@ if not did.endswith(EXPECTED_SUFFIX):
     raise SystemExit(1)
 
 print("Match. This is your original identity.\n")
-pw1 = getpass.getpass("Passphrase for the new identity.pem (your old one works): ").strip()
-pw2 = getpass.getpass("Type it again to confirm: ").strip()
+pw1 = input("Choose a passphrase (VISIBLE on screen this time): ").strip()
+pw2 = pw1
 if not pw1 or pw1 != pw2:
     print("Passphrases were empty or did not match. Nothing was written.")
     raise SystemExit(1)

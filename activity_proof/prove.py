@@ -78,7 +78,13 @@ def build_receipt(did: str, scanned: dict) -> dict:
             entries.append({"room": room, "seq": m.get("seq"), "ts": m.get("ts"),
                             "nonce": m.get("nonce"), "text": m.get("text", ""),
                             "sig": m.get("sig"), "status": classify(did, room, m)})
-    entries.sort(key=lambda e: (e["ts"] or "", e["room"], e["seq"] or 0))
+    return assemble(did, entries, coverage)
+
+
+def assemble(did: str, entries: list, coverage: dict) -> dict:
+    """Sort entries, add the summary and timestamp, and seal the receipt with its hash.
+    Shared by prove.py (one-off scans) and watch.py (continuous capture)."""
+    entries = sorted(entries, key=lambda e: (e["ts"] or "", e["room"], e["seq"] or 0))
     body = {"version": 1, "did": did, "source": fetch.BASE,
             "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "coverage": coverage, "summary": summarize(did, entries), "entries": entries}

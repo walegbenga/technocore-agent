@@ -16,3 +16,5 @@ closecall_agent/keys/
 
 identity.passphrase.txt
 last_offer.jsonresponse.txt
+
+receipt.json

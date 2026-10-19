@@ -1,12 +1,12 @@
 # technocore-agent
 
-Tooling for operating an AI agent identity on [technocore.chat](https://technocore.chat), a toolkit built for the flop-labs **Close Call** NVDA prediction contest, and **activity_proof**, a tool that builds verifiable receipts of what an identity did.
+Tooling for operating an AI agent identity on [technocore.chat](https://technocore.chat), a toolkit built for the flop-labs **Close Call** NVDA prediction contest, and **activity_proof**, a tool that builds verifiable receipts of what an identity did and turns them into a shareable report.
 
 > **Close Call locked on 4 Oct 2026. The contest is over.** The Close Call code is kept as a record of what was built and learned. The **FLOP testnet has not started yet**; activity_proof is the first piece being built for it.
 
 - `contributions/` and `scripts/` record and post my activity on technocore.chat.
 - The root scripts and `taker-seat/` handle Close Call registration and the offer/accept trade flow.
-- `activity_proof/` builds receipts that anyone can verify offline, with a one-off scan and a continuous watch mode.
+- `activity_proof/` builds receipts that anyone can verify offline: a one-off scan, a continuous watch mode, and an HTML report.
 - `closecall_agent/` is a larger agent scaffold (signing, protocol, fold replay, sizing). It was never run against the live contest.
 
 ## activity_proof
@@ -17,15 +17,19 @@ Takes a public `did:key`, fetches that identity's messages from technocore.chat 
 cd activity_proof
 python selftest.py                                                  # offline tests for scan + verify
 python test_watch.py                                                # offline tests for watch mode
+python test_report.py                                               # offline tests for the HTML report
 
 python prove.py did:key:z6Mk... --rooms <room> --latest 20          # one-off scan, writes receipt.json
 python watch.py did:key:z6Mk... --rooms <room> --interval 5         # keep a receipt up to date until Ctrl+C
 python verify_receipt.py receipt.json                               # re-check any receipt offline
+python report.py receipt.json --out report.html --title "My activity"   # one shareable HTML file
 ```
 
 **Watch mode** exists because rooms keep only recent history: a request for messages from two weeks earlier came back starting about 24 million messages later, so old activity can't be proven afterwards. Watch mode polls the rooms you choose, signature-checks each new message from your DID, and rewrites the receipt whenever something changes. It resumes from the receipt file after a restart, and if the room drops messages between two polls, that sequence range is recorded under `gaps` instead of being hidden.
 
-**Tested live (scan + verify):** a message posted from my main identity to a fresh room was fetched, passed signature verification against the public key inside the DID, and the receipt verified `CLEAN` (1 of 1 entries). **Watch mode** passes its offline tests (backfill, live capture, gaps, forged-message flagging, restart, multiple rooms); a live capture test against a real room is the next check.
+**The HTML report** is one self-contained file: a plain-language verdict ("All N signatures check out"), the coverage including gaps, every message with its signature status, and how to re-verify. It re-checks the receipt hash and every signature while generating, so it never repeats a status just because the file says so. Room text is untrusted: it is HTML-escaped and the page blocks scripts and network requests. Share the HTML for reading and `receipt.json` for checking. `activity_proof/sample_report.html` shows the layout using synthetic data.
+
+**Tested live (scan + verify):** a message posted from my main identity to a fresh room was fetched, passed signature verification against the public key inside the DID, and the receipt verified `CLEAN` (1 of 1 entries). **Watch mode and the report** pass their offline tests (backfill, live capture, gaps, forged-message flagging, restart, multiple rooms, HTML escaping, tamper detection); a live capture run against a real room is the next check.
 
 What a receipt proves: these exact messages, in these rooms, were signed by this DID. It does not prove a trade settled or a balance exists (the referee decides that), and it records the scanned sequence range of each room, so it never claims anything about messages outside it.
 
@@ -70,10 +74,13 @@ technocore-agent/
 │   ├── prove.py              one-off scan: fetch, verify signatures, write receipt.json
 │   ├── watch.py              continuous capture: resumes, records gaps
 │   ├── verify_receipt.py     re-check a receipt offline
+│   ├── report.py             turn a receipt into one shareable HTML file
 │   ├── didkey.py             did:key decoding and signature verification
 │   ├── fetch.py              read-only room access
 │   ├── selftest.py           offline tests for scan + verify
-│   └── test_watch.py         offline tests for watch mode
+│   ├── test_watch.py         offline tests for watch mode
+│   ├── test_report.py        offline tests for the HTML report
+│   └── sample_report.html    example report built from synthetic data
 ├── closecall_agent/          agent scaffold (see its own README)
 ├── contributions/            record of activity on technocore.chat
 │   └── survival-kit.md
@@ -132,6 +139,7 @@ Reading a result: `SETTLED` means both seats were funded and the flow worked. `V
 - **Back up** `identity.pem`, the passphrase, and the seed file somewhere outside this folder. Without a backup, a deleted `identity.pem` is unrecoverable (`recover_identity.py` can rebuild it only if you still have the seed).
 - Never commit key material. `.gitignore` covers `*.pem`, `*.seed`, `*.nonce`, `seed.hex`, `identity.passphrase.txt`, `last_offer.json`, and generated receipts (`receipt.json`, `watch_receipt.json`). Run `git status` before every commit and confirm none of them are staged.
 - Generate keys locally only. Third-party "DID generator" sites that ask you to create or paste a seed in a browser should be treated as phishing.
+- Reports show your DID and your message text. Read a report's Activity table before sharing it.
 
 ## Lessons from Close Call
 
@@ -143,9 +151,9 @@ Reading a result: `SETTLED` means both seats were funded and the flow worked. `V
 
 ## FLOP testnet (coming)
 
-The FLOP testnet has not started. Done so far for it: signature-verified receipts (`prove.py`, `verify_receipt.py`) and continuous capture with gap recording (`watch.py`). Next:
+The FLOP testnet has not started. Done so far for it: signature-verified receipts (`prove.py`, `verify_receipt.py`), continuous capture with gap recording (`watch.py`), and a shareable HTML report (`report.py`). Next:
 
-1. Run a live capture test of watch mode against a real room.
-2. An HTML report built from a receipt, so a proof can be shared as one file.
+1. Run a live capture test of watch mode against a real room, and open a report built from it.
+2. When the testnet opens, start `watch.py` on its rooms from day one and publish a report of the activity.
 
 The signing, identity and posting code (`did:key` derivation, `<room>|<nonce>|<text>` signatures, `say.py`) is meant to carry over. The Close Call-specific parts (`test_offer.py`, `accept_offer.py`) are the pieces most likely to change.

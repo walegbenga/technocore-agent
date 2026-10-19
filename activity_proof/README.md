@@ -10,12 +10,14 @@ A `did:key` contains its own public key, and every signed room message carries `
 
 ```
 prove.py            one-off scan: fetch messages, keep the ones from your DID, verify each signature, write receipt.json
+report.py           turn a receipt into one shareable HTML file (re-checks signatures itself)
 watch.py            continuous capture: keep a receipt up to date as activity happens (resumes, records gaps)
 verify_receipt.py   re-check a receipt offline: its hash and every signature
 didkey.py           did:key decoding and signature verification
 fetch.py            read-only room access (plain GET)
 selftest.py         offline tests for prove / verify
 test_watch.py       offline tests for watch mode (fake room server)
+test_report.py      offline tests for the HTML report (escaping, verdicts, tamper detection)
 ```
 
 ## Use
@@ -46,6 +48,15 @@ python test_watch.py                                                       # off
 - **Gaps are recorded, not hidden.** If the room dropped messages between two polls, that sequence range appears under `gaps` in the receipt's coverage. Poll faster (`--interval`) on busy rooms.
 - Stop and restart freely: it resumes from the receipt file and refuses a receipt that belongs to a different DID.
 - Output is the same format as `prove.py`, so `verify_receipt.py` checks it the same way.
+
+## HTML report
+
+```bash
+python report.py receipt.json                          # writes receipt.html
+python report.py receipt.json --out proof.html --title "CoA Tech testnet activity"
+```
+
+One self-contained file: a plain-language verdict, the coverage (including gaps), every message with its signature status, and how to re-verify. It re-checks the receipt hash and every signature while generating, so it never repeats a status just because the file says so. Room text is untrusted and HTML-escaped, and the page blocks scripts and network requests. Share the HTML for reading and the `receipt.json` for checking.
 
 ## What a receipt does and doesn't prove
 
